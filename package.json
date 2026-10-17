@@ -1,16 +1,16 @@
 {
-  "name": "buylead-mvp",
+  "name": "buylead-netlify",
   "version": "1.0.0",
-  "description": "Enquiry funnel for coffee/tea vending machine rentals (Chennai, Bangalore, Hyderabad)",
+  "description": "Enquiry funnel for coffee/tea vending machine rentals, hosted on Netlify with WhatsApp lead alerts",
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "node server.js"
+    "test": "USE_MEMORY_STORE=1 OTP_SECRET=test-secret-0123456789 ADMIN_PASSWORD=test-admin node test/run.mjs"
   },
   "engines": {
-    "node": ">=22.13"
+    "node": ">=20"
   },
   "dependencies": {
-    "express": "^4.21.2"
+    "@netlify/blobs": "^8.1.0"
   }
 }
