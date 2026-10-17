@@ -1,0 +1,16 @@
+{
+  "name": "buylead-mvp",
+  "version": "1.0.0",
+  "description": "Enquiry funnel for coffee/tea vending machine rentals (Chennai, Bangalore, Hyderabad)",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

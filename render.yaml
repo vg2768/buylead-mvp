@@ -1,0 +1,41 @@
+# Render Blueprint. Push this repo to GitHub, then in Render: New > Blueprint > pick the repo.
+# A persistent disk needs a paid instance (starter). On the free plan, leads are lost on every restart.
+services:
+  - type: web
+    name: buylead-mvp
+    runtime: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /healthz
+    disk:
+      name: leads-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DB_PATH
+        value: /var/data/leads.db
+      - key: ADMIN_USER
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: OTP_MODE
+        value: webhook
+      - key: OTP_WEBHOOK_URL
+        sync: false
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_TO
+        sync: false
+      - key: WHATSAPP_TEMPLATE
+        value: new_lead_alert
+      - key: WHATSAPP_TEMPLATE_LANG
+        value: en
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
