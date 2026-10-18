@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lead Inbox</title>
+<style>
+  :root { --bg:#faf6f1; --card:#fff; --ink:#2b211b; --muted:#6d5f55; --brand:#7a4a2b; --line:#e5dbd0; --err:#b3261e; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#1a1411; --card:#251d18; --ink:#f3ece4; --muted:#b5a698; --brand:#d49a6a; --line:#3a2e26; --err:#ff8a80; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink); }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 16px; }
+  header { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  h1 { font-size:1.3rem; margin:0; }
+  .filters { display:flex; gap:8px; flex-wrap:wrap; }
+  select, input, textarea, button { font:inherit; color:var(--ink); background:var(--card); border:1px solid var(--line); border-radius:8px; padding:7px 10px; }
+  button { cursor:pointer; }
+  .count { color:var(--muted); font-size:.9rem; margin-bottom:10px; }
+  .lead { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:10px; }
+  .top { display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+  .name { font-weight:700; }
+  .meta { color:var(--muted); font-size:.88rem; }
+  .want { margin:6px 0; }
+  .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; align-items:center; }
+  .actions a { color:var(--brand); font-weight:600; }
+  .note { width:100%; margin-top:8px; }
+  .pill { font-size:.75rem; padding:2px 8px; border-radius:999px; border:1px solid var(--line); }
+  .pill.new { border-color:var(--brand); color:var(--brand); font-weight:700; }
+  .empty { text-align:center; color:var(--muted); padding:40px 0; }
+  #login { max-width: 340px; margin: 18vh auto 0; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; }
+  #login input { width:100%; margin:10px 0; }
+  .err { color:var(--err); font-size:.9rem; min-height:1.2em; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<div id="login">
+  <h1>Lead inbox</h1>
+  <input id="pw" type="password" placeholder="Password" autocomplete="current-password">
+  <button id="go" style="width:100%">Open inbox</button>
+  <div id="loginErr" class="err" role="alert"></div>
+</div>
+
+<div id="app" class="wrap hidden">
+  <header>
+    <h1>Lead inbox</h1>
+    <div class="filters">
+      <select id="fStatus"><option value="">All statuses</option></select>
+      <select id="fCity">
+        <option value="">All cities</option><option>Chennai</option><option>Bangalore</option><option>Hyderabad</option><option>Other</option>
+      </select>
+      <button id="logout">Log out</button>
+    </div>
+  </header>
+  <div id="count" class="count"></div>
+  <div id="list"></div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let statuses = [];
+let pw = '';
+try { pw = sessionStorage.getItem('inboxPw') || ''; } catch {}
+
+function el(tag, props = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') e.className = v; else if (k === 'text') e.textContent = v; else e[k] = v;
+  }
+  for (const kid of kids) e.append(kid);
+  return e;
+}
+
+async function api(url, opts = {}) {
+  const r = await fetch(url, { ...opts, headers: { ...(opts.headers || {}), 'x-admin-password': pw, 'content-type': 'application/json' } });
+  if (r.status === 401 || r.status === 429 || r.status === 503) {
+    const d = await r.json().catch(() => ({}));
+    const e = new Error(d.error || 'Not allowed'); e.auth = true; throw e;
+  }
+  if (!r.ok) throw new Error('Request failed');
+  return r.json();
+}
+
+function showApp(on) { $('login').classList.toggle('hidden', on); $('app').classList.toggle('hidden', !on); }
+
+async function load() {
+  const q = new URLSearchParams();
+  if ($('fStatus').value) q.set('status', $('fStatus').value);
+  if ($('fCity').value) q.set('city', $('fCity').value);
+  const data = await api('/api/admin/leads?' + q);
+  if (!statuses.length) {
+    statuses = data.statuses;
+    for (const s of statuses) $('fStatus').add(new Option(s, s));
+  }
+  render(data.leads);
+}
+
+function render(leads) {
+  $('count').textContent = leads.length + ' lead' + (leads.length === 1 ? '' : 's');
+  const list = $('list');
+  list.replaceChildren();
+  if (!leads.length) return list.append(el('div', { class: 'empty', text: 'No leads yet.' }));
+  for (const l of leads) {
+    const when = new Date(l.created_at).toLocaleString('en-IN');
+    const patch = (body) => api('/api/admin/leads/' + encodeURIComponent(l.key), { method: 'PATCH', body: JSON.stringify(body) });
+    const pill = el('span', { class: 'pill ' + l.status, text: l.status });
+    const status = el('select');
+    for (const s of statuses) status.add(new Option(s, s));
+    status.value = l.status;
+    status.onchange = async () => { await patch({ status: status.value }); pill.textContent = status.value; pill.className = 'pill ' + status.value; };
+    const note = el('textarea', { class: 'note', rows: 1, placeholder: 'Internal note (saved when you click away)', value: l.internal_note || '' });
+    note.onchange = () => patch({ internal_note: note.value });
+
+    const want = `${l.quantity} x ${l.machine}` + (l.duration_months ? ` for ${l.duration_months} months` : '') + ` in ${l.city}`;
+    list.append(el('div', { class: 'lead' },
+      el('div', { class: 'top' },
+        el('div', {}, el('span', { class: 'name', text: l.name }), l.company ? el('span', { class: 'meta', text: '  ' + l.company }) : ''),
+        el('div', { class: 'meta' }, pill, ' ', when)),
+      el('div', { class: 'want', text: want }),
+      l.notes ? el('div', { class: 'meta', text: l.notes }) : '',
+      el('div', { class: 'actions' },
+        el('a', { href: 'tel:+91' + l.phone, text: 'Call +91 ' + l.phone }),
+        el('a', { href: 'https://wa.me/91' + l.phone, target: '_blank', rel: 'noopener', text: 'WhatsApp' }),
+        status, l.source ? el('span', { class: 'meta', text: 'src: ' + l.source }) : ''),
+      note));
+  }
+}
+
+async function enter() {
+  try { await load(); showApp(true); $('loginErr').textContent = ''; }
+  catch (e) {
+    showApp(false);
+    $('loginErr').textContent = e.auth ? e.message : 'Could not load leads.';
+    try { sessionStorage.removeItem('inboxPw'); } catch {}
+  }
+}
+$('go').onclick = () => { pw = $('pw').value; try { sessionStorage.setItem('inboxPw', pw); } catch {} enter(); };
+$('pw').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('go').click(); });
+$('logout').onclick = () => { pw = ''; try { sessionStorage.removeItem('inboxPw'); } catch {} location.reload(); };
+$('fStatus').onchange = load; $('fCity').onchange = load;
+setInterval(() => { if (!document.hidden && pw && document.activeElement.tagName !== 'TEXTAREA') load().catch(() => {}); }, 30000);
+if (pw) enter();
+</script>
+</body>
+</html>
