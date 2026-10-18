@@ -3,57 +3,159 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#EADBC6">
 <title>Coffee &amp; Tea Vending Machine on Rent | VGS Enterprises</title>
 <meta name="description" content="Rent coffee and tea vending machines for your office, factory or shop in Chennai, Bangalore and Hyderabad. Get a quote today.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&display=swap" rel="stylesheet">
+<script>
+// Pick the theme before first paint so there is no flash: saved choice, otherwise the device setting.
+(function () {
+  var t = null;
+  try { t = localStorage.getItem('theme'); } catch (e) {}
+  if (t !== 'light' && t !== 'dark') t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
 <style>
+  /* Light: milk coffee. Dark: espresso. */
   :root {
-    --bg: #faf6f1; --card: #ffffff; --ink: #2b211b; --muted: #6d5f55;
-    --brand: #7a4a2b; --brand-dark: #5c3820; --line: #e5dbd0; --err: #b3261e; --ok: #1e7a46;
+    --bg: #EADBC6; --card: #FBF5EA; --field: #FFFBF3;
+    --ink: #2A1A10; --muted: #6A5240;
+    --brand: #5B3320; --brand-hover: #46261A; --on-brand: #FBF5EA;
+    --line: #CDB89D; --line-strong: #9C8467; --focus: #8A4B1F;
+    --steel: #9FAAB3; --steel-hi: #D2DAE0; --coffee: #5A3322; --foam: #EBD5B3;
+    --err: #A8231B; --ok: #1F6B3F;
+    color-scheme: light;
   }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #1a1411; --card: #251d18; --ink: #f3ece4; --muted: #b5a698; --brand: #d49a6a; --brand-dark: #e5b183; --line: #3a2e26; --err: #ff8a80; --ok: #6fd69a; }
+  :root[data-theme="dark"] {
+    --bg: #1A110B; --card: #2A1B12; --field: #1F140D;
+    --ink: #F2E4D1; --muted: #BDA68E;
+    --brand: #D49A5A; --brand-hover: #E4AE73; --on-brand: #1A110B;
+    --line: #4A3426; --line-strong: #7D6450; --focus: #E4AE73;
+    --steel: #6F7B85; --steel-hi: #A4B0BA; --coffee: #3A2216; --foam: #CDB48F;
+    --err: #FF9D92; --ok: #7BD69F;
+    color-scheme: dark;
   }
+
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--ink); line-height: 1.5; }
-  .wrap { max-width: 560px; margin: 0 auto; padding: 24px 16px 48px; }
-  h1 { font-size: 1.6rem; line-height: 1.25; margin: 8px 0 8px; }
-  .sub { color: var(--muted); margin: 0 0 20px; }
-  .cities { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
-  .chip { font-size: .85rem; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; background: var(--card); }
-  form, .done { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
-  label { display: block; font-weight: 600; font-size: .92rem; margin: 14px 0 6px; }
-  label:first-of-type { margin-top: 0; }
-  input, select, textarea { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; }
-  input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+    line-height: 1.5; transition: background-color .25s ease, color .25s ease;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 8px 16px 56px; }
+
+  /* top bar */
+  .top { display: flex; align-items: center; justify-content: space-between; padding: 8px 0 4px; }
+  .brand { font-family: "Young Serif", Georgia, "Times New Roman", serif; font-size: 1.15rem; letter-spacing: .01em; }
+  .theme {
+    width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+    background: var(--card); color: var(--ink); border: 1.5px solid var(--line-strong); padding: 0;
+    transition: background-color .2s ease, border-color .2s ease;
+  }
+  button.theme:hover { background: var(--card); border-color: var(--brand); }
+  .theme svg { width: 22px; height: 22px; grid-area: 1 / 1; transition: transform .45s cubic-bezier(.3,1.4,.5,1), opacity .25s ease; }
+  .theme .moon { opacity: 1; transform: rotate(0) scale(1); }
+  .theme .sun { opacity: 0; transform: rotate(-90deg) scale(.5); }
+  :root[data-theme="dark"] .theme .moon { opacity: 0; transform: rotate(90deg) scale(.5); }
+  :root[data-theme="dark"] .theme .sun { opacity: 1; transform: rotate(0) scale(1); }
+
+  /* hero */
+  .hero { display: grid; grid-template-columns: 1fr 92px; gap: 12px; align-items: center; margin: 12px 0 22px; }
+  h1 { font-family: "Young Serif", Georgia, "Times New Roman", serif; font-weight: 400; font-size: 1.85rem; line-height: 1.15; margin: 0 0 10px; text-wrap: balance; }
+  .sub { color: var(--muted); margin: 0 0 14px; max-width: 46ch; }
+  .cities { display: flex; gap: 8px; flex-wrap: wrap; margin: 0; padding: 0; list-style: none; }
+  .cities li { font-size: .88rem; border: 1px solid var(--line-strong); border-radius: 999px; padding: 3px 12px; }
+  .cup { width: 92px; height: 92px; }
+  .cup .steel { fill: var(--steel); } .cup .steel-hi { fill: var(--steel-hi); }
+  .cup .coffee { fill: var(--coffee); } .cup .foam { fill: var(--foam); }
+  .cup .steam { fill: none; stroke: var(--muted); stroke-width: 2.4; stroke-linecap: round; opacity: .55; }
+  .cup .steam path { transform-box: fill-box; transform-origin: center bottom; animation: rise 3.6s ease-in-out infinite; }
+  .cup .steam path:nth-child(2) { animation-delay: 1.2s; }
+  .cup .steam path:nth-child(3) { animation-delay: 2.4s; }
+  @keyframes rise {
+    0% { transform: translateY(5px); opacity: 0; }
+    35% { opacity: 1; }
+    100% { transform: translateY(-9px); opacity: 0; }
+  }
+
+  /* form */
+  form, .done { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
+  label { display: block; font-weight: 600; font-size: .93rem; margin: 16px 0 6px; }
+  form > label:first-child { margin-top: 0; }
+  .row > div > label { margin-top: 16px; }
+  .hint { font-weight: 400; color: var(--muted); }
+  input, select, textarea {
+    width: 100%; font: inherit; color: var(--ink); background: var(--field);
+    border: 1.5px solid var(--line-strong); border-radius: 10px; padding: 11px 12px;
+  }
+  input::placeholder, textarea::placeholder { color: var(--muted); opacity: .8; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; align-items: end; }
+  @media (max-width: 440px) { .row.wide { grid-template-columns: 1fr; } }
   .phone { display: flex; gap: 8px; }
-  .phone span { display: flex; align-items: center; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--muted); }
-  button { font: inherit; font-weight: 600; cursor: pointer; border: 0; border-radius: 10px; padding: 12px 16px; background: var(--brand); color: #fff; }
-  @media (prefers-color-scheme: dark) { button { color: #1a1411; } }
-  button:hover { background: var(--brand-dark); }
+  .phone span { display: flex; align-items: center; padding: 0 12px; border: 1.5px solid var(--line-strong); border-radius: 10px; background: var(--field); color: var(--muted); }
+  button { font: inherit; font-weight: 600; cursor: pointer; border: 0; border-radius: 12px; padding: 13px 16px; background: var(--brand); color: var(--on-brand); transition: background-color .15s ease; }
+  button:hover { background: var(--brand-hover); }
   button:disabled { opacity: .6; cursor: not-allowed; }
-  button.ghost { background: transparent; color: var(--brand); border: 1px solid var(--brand); }
+  button.ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--line-strong); }
+  button.ghost:hover { border-color: var(--brand); background: transparent; }
   .full { width: 100%; margin-top: 18px; }
-  .msg { min-height: 1.3em; margin-top: 10px; font-size: .9rem; }
+  .msg { min-height: 1.3em; margin-top: 10px; font-size: .92rem; }
   .msg.err { color: var(--err); } .msg.ok { color: var(--ok); }
   .hp { position: absolute; left: -9999px; height: 0; overflow: hidden; }
   .hidden { display: none; }
-  .done h2 { margin-top: 0; }
-  .small { font-size: .8rem; color: var(--muted); margin-top: 14px; }
+  .done h2 { font-family: "Young Serif", Georgia, serif; font-weight: 400; margin-top: 0; }
+  .small { font-size: .82rem; color: var(--muted); margin: 14px 0 0; }
+
+  @media (min-width: 560px) {
+    .hero { grid-template-columns: 1fr 120px; gap: 20px; margin-top: 20px; }
+    h1 { font-size: 2.35rem; }
+    .cup { width: 120px; height: 120px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cup .steam path { animation: none; opacity: .6; }
+    .theme svg, body { transition: none; }
+  }
 </style>
 </head>
 <body>
 <main class="wrap">
-  <div class="chip" style="display:inline-block">VGS Enterprises</div>
-  <h1>Coffee &amp; tea vending machines on rent</h1>
-  <p class="sub">For offices, factories, hospitals, showrooms and shops. Tell us what you need and we will call you with a quote.</p>
-  <div class="cities"><span class="chip">Chennai</span><span class="chip">Bangalore</span><span class="chip">Hyderabad</span></div>
+  <div class="top">
+    <div class="brand">VGS Enterprises</div>
+    <button type="button" id="themeBtn" class="theme" aria-label="Switch to dark theme" title="Switch to dark theme">
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z"/></svg>
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M5.3 18.7L7 17M17 7l1.7-1.7"/></svg>
+    </button>
+  </div>
+
+  <section class="hero">
+    <div>
+      <h1>Coffee &amp; tea vending machines on rent</h1>
+      <p class="sub">For offices, factories, hospitals, showrooms and shops. Tell us what you need and we will call you with a quote.</p>
+      <ul class="cities"><li>Chennai</li><li>Bangalore</li><li>Hyderabad</li></ul>
+    </div>
+    <svg class="cup" viewBox="0 0 120 120" role="img" aria-label="A steaming filter coffee in a steel tumbler and dabara">
+      <g class="steam"><path d="M47 30c-5-6 4-9-1-17"/><path d="M60 30c-5-6 4-9-1-19"/><path d="M73 30c-5-6 4-9-1-17"/></g>
+      <path class="steel" d="M12 76h96l-8 22q-2 6-9 6H29q-7 0-9-6z"/>
+      <path class="steel-hi" d="M12 76h96l-1.6 4.4H13.6z"/>
+      <path class="steel-hi" d="M33 40h54l-4 58H37z"/>
+      <path class="steel" d="M33 40h10l-1.2 58H37z"/>
+      <ellipse class="steel-hi" cx="60" cy="40" rx="27" ry="6"/>
+      <ellipse class="foam" cx="60" cy="40.5" rx="23" ry="4.4"/>
+      <ellipse class="coffee" cx="60" cy="41" rx="18" ry="2.8"/>
+    </svg>
+  </section>
 
   <form id="form" novalidate>
     <label for="name">Your name</label>
     <input id="name" name="name" autocomplete="name" maxlength="80" required>
 
-    <label for="company">Company / place <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+    <label for="company">Company / place <span class="hint">(optional)</span></label>
     <input id="company" name="company" autocomplete="organization" maxlength="120">
 
     <div class="row">
@@ -67,18 +169,18 @@
       </div>
     </div>
 
-    <div class="row">
+    <div class="row wide">
       <div>
         <label for="quantity">How many machines?</label>
         <input id="quantity" name="quantity" type="number" min="1" max="500" value="1" inputmode="numeric" required>
       </div>
       <div>
-        <label for="duration">For how many months? <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
-        <input id="duration" name="duration_months" type="number" min="1" max="120" inputmode="numeric">
+        <label for="duration">For how many months? <span class="hint">(minimum contract is 12 months)</span></label>
+        <input id="duration" name="duration_months" type="number" min="1" max="120" inputmode="numeric" placeholder="Optional, 12 or more">
       </div>
     </div>
 
-    <label for="notes">Anything else? <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+    <label for="notes">Anything else? <span class="hint">(optional)</span></label>
     <textarea id="notes" name="notes" rows="3" maxlength="500" placeholder="Number of staff, location, start date..."></textarea>
 
     <label for="phone">Mobile number</label>
@@ -113,8 +215,29 @@ const msg = (text, kind) => { $('msg').textContent = text || ''; $('msg').classN
 const params = new URLSearchParams(location.search);
 const source = (params.get('utm_source') || params.get('src') || document.referrer || '').slice(0, 60);
 
+// ---- theme toggle (sun / moon) ----
+const root = document.documentElement;
+function applyTheme(t, save) {
+  root.setAttribute('data-theme', t);
+  const next = t === 'dark' ? 'light' : 'dark';
+  $('themeBtn').setAttribute('aria-label', 'Switch to ' + next + ' theme');
+  $('themeBtn').title = 'Switch to ' + next + ' theme';
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'dark' ? '#1A110B' : '#EADBC6');
+  if (save) { try { localStorage.setItem('theme', t); } catch (e) {} }
+}
+applyTheme(root.getAttribute('data-theme') || 'light', false);
+$('themeBtn').onclick = () => applyTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark', true);
+try {
+  // follow the device setting live, but only until the visitor picks a theme themselves
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    let saved = null; try { saved = localStorage.getItem('theme'); } catch (err) {}
+    if (!saved) applyTheme(e.matches ? 'dark' : 'light', false);
+  });
+} catch (e) {}
+
+// ---- form ----
 for (const c of ['Chennai', 'Bangalore', 'Hyderabad', 'Other']) $('city').add(new Option(c, c));
-for (const m of ['Coffee', 'Tea', 'Both coffee and tea', 'Not sure']) $('machine').add(new Option(m, m));
+for (const m of ['Filter coffee', 'Bean to cup', 'Not sure']) $('machine').add(new Option(m, m));
 let otpToken = '';
 
 async function post(url, body) {

@@ -2,7 +2,7 @@ import { createHmac, randomBytes, randomInt, timingSafeEqual, createHash } from 
 import { getStore } from '@netlify/blobs';
 
 export const CITIES = ['Chennai', 'Bangalore', 'Hyderabad', 'Other'];
-export const MACHINES = ['Coffee', 'Tea', 'Both coffee and tea', 'Not sure'];
+export const MACHINES = ['Filter coffee', 'Bean to cup', 'Not sure'];
 export const STATUSES = ['new', 'called', 'quoted', 'won', 'lost'];
 export const PHONE_RE = /^[6-9]\d{9}$/;
 

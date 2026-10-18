@@ -37,7 +37,7 @@ const ctx = (ip = `10.0.0.${++ipCounter}`, params = {}) => ({ ip, params }); // 
 const post = (url, body) => new Request('http://x' + url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 const call = async (fn, req, c = ctx()) => { const r = await fn(req, c); return { status: r.status, body: await r.json() }; };
 
-const baseLead = (phone, over = {}) => ({ name: 'Priya', phone, company: 'Acme\nTech', city: 'Bangalore', machine: 'Both coffee and tea', quantity: 3, duration_months: 6, notes: 'line1\nline2', ...over });
+const baseLead = (phone, over = {}) => ({ name: 'Priya', phone, company: 'Acme\nTech', city: 'Bangalore', machine: 'Bean to cup', quantity: 3, duration_months: 6, notes: 'line1\nline2', ...over });
 async function getOtp(phone, ip) {
   const r = await call(otpSend, post('/api/otp/send', { phone }), ctx(ip));
   assert.equal(r.status, 200, JSON.stringify(r.body));
@@ -66,7 +66,7 @@ assert.equal(wa.headers.authorization, 'Bearer EAAtesttoken123456');
 assert.equal(wa.body.to, '919876543210'); assert.equal(wa.body.type, 'template');
 assert.equal(wa.body.template.name, 'new_lead_alert');
 const params = wa.body.template.components[0].parameters.map((p) => p.text);
-assert.deepEqual(params, ['Priya (Acme Tech)', '+919123456780', 'Bangalore', '3 x Both coffee and tea for 6 months. Notes: line1 line2']);
+assert.deepEqual(params, ['Priya (Acme Tech)', '+919123456780', 'Bangalore', '3 x Bean to cup for 6 months. Notes: line1 line2']);
 assert.ok(params.every((t) => !/[\n\t]/.test(t))); ok('WhatsApp template call is correctly formed and newline-free');
 
 // --- token replay, duplicates, wrong code, tampering
