@@ -97,7 +97,26 @@ export async function verifyOtp(secret, token, phone, code) {
   return { ok: true, id };
 }
 
+// MSG91 "Send OTP" API. We send our own code (the `otp` parameter) because the signed token must match it.
+async function sendMsg91Otp(phone, code) {
+  const { MSG91_AUTH_KEY: authkey, MSG91_OTP_TEMPLATE_ID: templateId } = process.env;
+  if (!authkey || !templateId) throw new Error('MSG91 is not configured (set MSG91_AUTH_KEY and MSG91_OTP_TEMPLATE_ID)');
+  const url = new URL('https://control.msg91.com/api/v5/otp');
+  url.searchParams.set('template_id', templateId);
+  url.searchParams.set('mobile', `91${phone}`);
+  url.searchParams.set('otp', code);
+  url.searchParams.set('authkey', authkey);
+  const r = await fetch(url, { headers: { authkey } });
+  // MSG91 can answer HTTP 200 with {"type":"error"}, so judge by the body, not only the status.
+  // The error text below never includes the URL, so the auth key and code stay out of the logs.
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok || data.type !== 'success') {
+    throw new Error(`MSG91 ${r.status}: ${String(data.message || 'unexpected response').slice(0, 200)}`);
+  }
+}
+
 export async function deliverOtp(phone, code) {
+  if (process.env.OTP_MODE === 'msg91') return sendMsg91Otp(phone, code);
   const url = process.env.OTP_WEBHOOK_URL;
   if (process.env.OTP_MODE === 'webhook' && url) {
     const r = await fetch(url, {

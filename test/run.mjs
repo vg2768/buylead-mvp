@@ -10,7 +10,14 @@ process.env.WHATSAPP_TEMPLATE = 'new_lead_alert';
 const waCalls = [];
 const realFetch = globalThis.fetch;
 let waShouldFail = false;
+const smsCalls = [];
+let smsReply = { type: 'success', message: 'queued' };
+let smsStatus = 200;
 globalThis.fetch = async (url, opts) => {
+  if (String(url).includes('control.msg91.com')) {
+    smsCalls.push({ url: String(url), headers: opts?.headers || {} });
+    return new Response(JSON.stringify(smsReply), { status: smsStatus });
+  }
   if (String(url).includes('graph.facebook.com')) {
     waCalls.push({ url: String(url), headers: opts.headers, body: JSON.parse(opts.body) });
     return waShouldFail
@@ -148,6 +155,35 @@ assert.equal(list.body.leads.length, 0); ok('admin: city filter');
 for (let i = 0; i < 10; i++) await get('/api/admin/leads', 'guess' + i, ctx('5.4.3.2'));
 assert.equal((await get('/api/admin/leads', 'test-admin', ctx('5.4.3.2'))).status, 429); ok('admin: IP locked out after 10 failures, even with the right password');
 assert.equal((await get('/api/admin/leads', 'test-admin', ctx('6.7.8.9'))).status, 200); ok('admin: other IPs unaffected');
+
+// --- MSG91 SMS delivery
+process.env.OTP_MODE = 'msg91'; process.env.MSG91_AUTH_KEY = 'authkey-test-1234'; process.env.MSG91_OTP_TEMPLATE_ID = 'tmpl123';
+r = await call(otpSend, post('/api/otp/send', { phone: '9000000010' }));
+assert.equal(r.status, 200); assert.equal(smsCalls.length, 1);
+const u = new URL(smsCalls[0].url);
+assert.equal(u.origin + u.pathname, 'https://control.msg91.com/api/v5/otp');
+assert.equal(u.searchParams.get('mobile'), '919000000010');
+assert.equal(u.searchParams.get('template_id'), 'tmpl123');
+assert.equal(u.searchParams.get('authkey'), 'authkey-test-1234');
+assert.equal(smsCalls[0].headers.authkey, 'authkey-test-1234');
+const smsCode = u.searchParams.get('otp'); assert.match(smsCode, /^\d{6}$/);
+assert.ok(!JSON.stringify(r.body).includes(smsCode)); ok('MSG91 request is correctly formed and the code is not returned to the browser');
+const smsToken = r.body.token;
+r = await call(lead, post('/api/leads', { ...baseLead('9000000010'), otp: smsCode, otp_token: smsToken }));
+assert.equal(r.status, 200); ok('the code sent by SMS is the code the server accepts');
+
+errors.length = 0;
+smsReply = { type: 'error', message: 'Invalid authkey' };
+r = await call(otpSend, post('/api/otp/send', { phone: '9000000011' }));
+assert.equal(r.status, 502); assert.match(r.body.error, /Could not send/);
+assert.ok(errors.some((e) => e.includes('Invalid authkey')));
+assert.ok(!errors.join(' ').includes('authkey-test-1234'), 'auth key must never reach the logs'); ok('MSG91 error inside an HTTP 200 reply is caught, logged without the key');
+smsReply = { type: 'success', message: 'queued' }; smsStatus = 500;
+assert.equal((await call(otpSend, post('/api/otp/send', { phone: '9000000012' }))).status, 502); ok('MSG91 HTTP failure is caught');
+smsStatus = 200;
+delete process.env.MSG91_OTP_TEMPLATE_ID;
+assert.equal((await call(otpSend, post('/api/otp/send', { phone: '9000000013' }))).status, 502); ok('missing MSG91 settings fail safely, no SMS attempted');
+process.env.OTP_MODE = 'dev';
 
 delete process.env.OTP_SECRET;
 assert.equal((await call(otpSend, post('/api/otp/send', { phone: '9000000009' }))).status, 500); ok('refuses to run without OTP_SECRET');

@@ -37,7 +37,20 @@ If an alert fails, the function log shows the WhatsApp error code, and the lead 
 
 ## Customer OTP by SMS
 
-Set `OTP_MODE=webhook` and `OTP_WEBHOOK_URL` to an endpoint that sends the SMS (MSG91, Twilio, Fast2SMS or a small adapter). It receives `{phone, code, message}` with phone as `+91...`. India SMS needs DLT template registration with your provider. Until then, `OTP_MODE=dev` writes the code to the Netlify function log, which is for testing only: real visitors will never receive a code.
+The site can send the code by SMS through MSG91 (`OTP_MODE=msg91`). Until you switch it on, `OTP_MODE=dev` writes the code to the Netlify function log, which is for testing only: real visitors never receive a code.
+
+Setting up MSG91:
+
+1. Create an MSG91 account and add credit.
+2. Complete DLT registration, which India requires for any SMS: register your business (principal entity), a 6-letter sender ID, and an OTP message template with your telecom's DLT portal. Approval usually takes 1 to 2 days. Check MSG91's onboarding screens for their current steps and fees.
+3. In MSG91, create an OTP template that uses your approved DLT template, with `##OTP##` where the code goes. Example text: `##OTP## is your verification code for VGS Enterprises. It is valid for 10 minutes.` The DLT-approved text must match.
+4. Copy your Auth Key (API Management) and the template ID.
+5. In Netlify, add `MSG91_AUTH_KEY` (mark it secret) and `MSG91_OTP_TEMPLATE_ID`, then set `OTP_MODE=msg91` and redeploy.
+6. Request a code from the live page using your own phone and confirm the SMS arrives.
+
+If MSG91 rejects a request (wrong key, unapproved template, no credit), visitors see "Could not send the code" and the Netlify function log shows MSG91's reason. The auth key is never written to the log.
+
+Another SMS provider can be used with `OTP_MODE=webhook` and `OTP_WEBHOOK_URL`, an endpoint you host that receives `{phone, code, message}` with phone as `+91...` and sends the SMS.
 
 ## Protection built in
 
@@ -50,7 +63,7 @@ Set `OTP_MODE=webhook` and `OTP_WEBHOOK_URL` to an endpoint that sends the SMS (
     npm install
     npm test
 
-Runs 26 checks on the functions with an in-memory store and a stubbed WhatsApp API (nothing is sent). It does not touch real Netlify Blobs or Meta, so do one live test lead after deploying.
+Runs 31 checks on the functions with an in-memory store and a stubbed WhatsApp API (nothing is sent). It does not touch real Netlify Blobs or Meta, so do one live test lead after deploying.
 
 ## Not included yet
 
