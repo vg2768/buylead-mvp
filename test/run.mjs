@@ -38,6 +38,9 @@ const { default: otpSend } = await import('../netlify/functions/otp-send.mjs');
 const { default: lead } = await import('../netlify/functions/lead.mjs');
 const { default: admin } = await import('../netlify/functions/admin.mjs');
 const { hit } = await import('../netlify/lib/common.mjs');
+const { default: verify } = await import('../netlify/functions/verify.mjs');
+const { default: webhook } = await import('../netlify/functions/whatsapp-webhook.mjs');
+const { createHmac } = await import('node:crypto');
 
 let ipCounter = 0;
 const ctx = (ip = `10.0.0.${++ipCounter}`, params = {}) => ({ ip, params }); // unique IP per call unless a test pins one
@@ -183,6 +186,55 @@ assert.equal((await call(otpSend, post('/api/otp/send', { phone: '9000000012' })
 smsStatus = 200;
 delete process.env.MSG91_OTP_TEMPLATE_ID;
 assert.equal((await call(otpSend, post('/api/otp/send', { phone: '9000000013' }))).status, 502); ok('missing MSG91 settings fail safely, no SMS attempted');
+process.env.OTP_MODE = 'dev';
+
+// --- WhatsApp reverse verification
+r = await call(verify, post('/api/verify/start', { phone: '9000000020' }));
+assert.deepEqual(r.body, { mode: 'otp' }); ok('verify/start tells the page to use the code flow when OTP_MODE is not whatsapp');
+process.env.OTP_MODE = 'whatsapp'; process.env.WHATSAPP_BUSINESS_NUMBER = '+91 99999 11111';
+process.env.WHATSAPP_APP_SECRET = 'app-secret-test'; process.env.WHATSAPP_VERIFY_TOKEN = 'vt-test';
+const WA = '9000000020';
+r = await call(verify, post('/api/verify/start', { phone: WA }));
+assert.equal(r.status, 200); assert.equal(r.body.mode, 'whatsapp');
+const wu = new URL(r.body.wa_link);
+assert.equal(wu.origin + wu.pathname, 'https://wa.me/919999911111');
+const waCode = /Code: (\d{6})/.exec(wu.searchParams.get('text'))[1];
+assert.ok(!JSON.stringify(r.body.token).includes(waCode)); ok('verify/start returns a wa.me link to the business number with a code');
+const waTok = r.body.token;
+const status = async (phone, token) => (await call(verify, post('/api/verify/status', { phone, token }))).body.status;
+assert.equal(await status(WA, waTok), 'pending'); ok('status is pending before the WhatsApp message');
+r = await call(lead, post('/api/leads', { ...baseLead(WA), wa_token: waTok }));
+assert.equal(r.status, 400); assert.match(r.body.error, /not been received/); ok('lead refused before the WhatsApp message arrives');
+
+const sendHook = (from, text, secret = 'app-secret-test') => {
+  const raw = JSON.stringify({ entry: [{ changes: [{ value: { messages: [{ from, type: 'text', text: { body: text } }] } }] }] });
+  const sig = 'sha256=' + createHmac('sha256', secret).update(raw).digest('hex');
+  return fetchHook(raw, sig);
+};
+const fetchHook = async (raw, sig) => {
+  const res = await webhook(new Request('http://x/api/whatsapp/webhook', { method: 'POST', headers: { 'x-hub-signature-256': sig }, body: raw }));
+  return res.status;
+};
+assert.equal(await sendHook('919000000020', `Verify my number for VGS Enterprises. Code: ${waCode}`, 'wrong-secret'), 401);
+assert.equal(await status(WA, waTok), 'pending'); ok('webhook rejects a bad signature and verifies nothing');
+await sendHook('919111111111', `Code: ${waCode}`); // someone else's number sends the code
+assert.equal(await status(WA, waTok), 'pending'); ok('a code sent from a different number does not verify this number');
+const before2 = waCalls.length;
+assert.equal(await sendHook('919000000020', `Verify my number for VGS Enterprises. Code: ${waCode}`), 200);
+assert.equal(await status(WA, waTok), 'verified'); ok('message from the same number with the right code verifies it');
+assert.equal(waCalls.length, before2 + 1); assert.equal(waCalls.at(-1).body.type, 'text'); ok('a free-form confirmation reply is sent');
+assert.equal(await status('9000000021', waTok), 'invalid'); ok('token does not work for another phone number');
+r = await call(lead, post('/api/leads', { ...baseLead('9000000021'), wa_token: waTok }));
+assert.equal(r.status, 400); ok('lead for a different phone with that token is refused');
+r = await call(lead, post('/api/leads', { ...baseLead(WA), wa_token: waTok }));
+assert.deepEqual(r, { status: 200, body: { ok: true } }); ok('lead accepted after WhatsApp verification');
+r = await call(lead, post('/api/leads', { ...baseLead(WA, { name: 'Again' }), wa_token: waTok }));
+assert.equal(r.status, 400); assert.match(r.body.error, /already used/); ok('WhatsApp verification cannot be reused');
+r = await call(lead, post('/api/leads', { ...baseLead('9000000022'), otp: '123456', otp_token: 'x' }));
+assert.equal(r.status, 400); ok('in whatsapp mode the SMS-code path is not accepted');
+assert.equal((await webhook(new Request('http://x/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=vt-test&hub.challenge=abc123'))).status, 200);
+assert.equal(await (await webhook(new Request('http://x/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=vt-test&hub.challenge=abc123'))).text(), 'abc123');
+assert.equal((await webhook(new Request('http://x/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=nope&hub.challenge=abc123'))).status, 403); ok('webhook setup handshake works and rejects a wrong token');
 process.env.OTP_MODE = 'dev';
 
 delete process.env.OTP_SECRET;

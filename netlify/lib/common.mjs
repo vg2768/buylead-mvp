@@ -97,6 +97,76 @@ export async function verifyOtp(secret, token, phone, code) {
   return { ok: true, id };
 }
 
+// ---------- WhatsApp reverse verification (free) ----------
+// The visitor sends a message containing a one-time code to OUR WhatsApp number. Meta calls our webhook with the
+// sender's real number, so a matching (sender, code) pair proves they control that WhatsApp number.
+// Messages sent TO a business are never charged, so this costs nothing.
+const waSign = (secret, id, exp, phone) => createHmac('sha256', secret).update(`wa.${id}.${exp}.${phone}`).digest('hex');
+const waCodeKey = (phone, code) => createHash('sha256').update(`${phone}:${code}`).digest('hex').slice(0, 40);
+
+export async function startWaVerify(secret, phone) {
+  const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+  const id = randomBytes(8).toString('hex');
+  const exp = Date.now() + OTP_TTL_MS;
+  await store('wa-pending').setJSON(waCodeKey(phone, code), { id, exp });
+  return { code, token: `${id}.${exp}.${waSign(secret, id, exp, phone)}` };
+}
+
+function parseWaToken(secret, token, phone) {
+  const [id, expStr, sig] = String(token || '').split('.');
+  const exp = Number(expStr);
+  if (!/^[0-9a-f]{16}$/.test(id || '') || !Number.isFinite(exp) || !/^[0-9a-f]{64}$/.test(sig || '')) return null;
+  if (!safeEqual(waSign(secret, id, exp, phone), sig)) return null;
+  return { id, exp };
+}
+
+// Called by the webhook for every incoming WhatsApp text. Returns true if it completed a verification.
+export async function recordWaMessage(from, text) {
+  const phone = normalizePhone(from);
+  const m = /(?<!\d)(\d{6})(?!\d)/.exec(String(text || ''));
+  if (!PHONE_RE.test(phone) || !m) return false;
+  const pending = store('wa-pending');
+  const key = waCodeKey(phone, m[1]);
+  const p = await getJSON(pending, key);
+  if (!p) return false;
+  await pending.delete(key);
+  if (p.exp < Date.now()) return false;
+  await store('wa-verified').setJSON(p.id, { phone, at: Date.now() });
+  return true;
+}
+
+// 'verified' | 'pending' | 'invalid'
+export async function waStatus(secret, token, phone) {
+  const t = parseWaToken(secret, token, phone);
+  if (!t || t.exp < Date.now()) return 'invalid';
+  const v = await getJSON(store('wa-verified'), t.id);
+  return v && v.phone === phone ? 'verified' : 'pending';
+}
+
+// Single use: marks the token as spent when the lead is accepted.
+export async function consumeWaToken(secret, token, phone) {
+  const t = parseWaToken(secret, token, phone);
+  if (!t) return { ok: false, error: 'Please verify your number again.' };
+  if (t.exp < Date.now()) return { ok: false, error: 'Verification expired. Please verify again.' };
+  const used = store('otp-used');
+  if (await used.get(t.id)) return { ok: false, error: 'Verification already used. Please verify again.' };
+  const v = await getJSON(store('wa-verified'), t.id);
+  if (!v || v.phone !== phone) return { ok: false, error: 'Your WhatsApp message has not been received yet.' };
+  await used.setJSON(t.id, { at: Date.now() });
+  return { ok: true, id: t.id };
+}
+
+export async function sendWhatsAppText(to, body) {
+  const env = process.env;
+  if (!env.WHATSAPP_TOKEN || !env.WHATSAPP_PHONE_NUMBER_ID) return;
+  const r = await fetch(`https://graph.facebook.com/${env.WHATSAPP_API_VERSION || 'v23.0'}/${env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${env.WHATSAPP_TOKEN}` },
+    body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { body } }),
+  });
+  if (!r.ok) throw new Error(`WhatsApp reply ${r.status}`);
+}
+
 // MSG91 "Send OTP" API. We send our own code (the `otp` parameter) because the signed token must match it.
 async function sendMsg91Otp(phone, code) {
   const { MSG91_AUTH_KEY: authkey, MSG91_OTP_TEMPLATE_ID: templateId } = process.env;

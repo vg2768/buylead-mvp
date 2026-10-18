@@ -197,6 +197,12 @@
       <button type="button" id="resend" class="ghost full" style="margin-top:10px">Resend code</button>
     </div>
 
+    <div id="waBox" class="hidden">
+      <p class="small" style="margin:0 0 10px">Tap the button, then press send in WhatsApp. Do not change the message. This page continues by itself once we receive it.</p>
+      <a id="waLink" class="full" target="_blank" rel="noopener" style="display:block;text-align:center;padding:14px 18px;border-radius:12px;background:#1f8f4e;color:#fff;font-weight:700;text-decoration:none">Open WhatsApp to verify</a>
+      <button type="button" id="waRestart" class="ghost full" style="margin-top:10px">Get a new link</button>
+    </div>
+
     <button type="button" id="sendOtp" class="full">Verify my number</button>
     <button type="submit" id="submit" class="full hidden">Request a quote</button>
     <div id="msg" class="msg" role="status" aria-live="polite"></div>
@@ -247,6 +253,30 @@ async function post(url, body) {
   return data;
 }
 
+let waMode = false, waToken = '', waTimer = null;
+
+function stopPoll() { if (waTimer) { clearInterval(waTimer); waTimer = null; } }
+
+function waVerified() {
+  stopPoll();
+  $('waBox').classList.add('hidden');
+  $('submit').classList.remove('hidden');
+  msg('Number verified. Press Request a quote to finish.', 'ok');
+}
+
+function pollWa(phone) {
+  stopPoll();
+  const until = Date.now() + 10 * 60 * 1000;
+  waTimer = setInterval(async () => {
+    if (Date.now() > until) { stopPoll(); return msg('The link expired. Press Get a new link.', 'err'); }
+    try {
+      const r = await post('/api/verify/status', { phone, token: waToken });
+      if (r.status === 'verified') waVerified();
+      else if (r.status === 'invalid') { stopPoll(); msg('The link expired. Press Get a new link.', 'err'); }
+    } catch (e) { /* keep polling; transient errors are fine */ }
+  }, 3000);
+}
+
 async function sendOtp() {
   const phone = $('phone').value.trim();
   if (!/^[6-9]\d{9}$/.test(phone)) return msg('Enter a valid 10-digit mobile number.', 'err');
@@ -255,6 +285,17 @@ async function sendOtp() {
   }
   $('sendOtp').disabled = true; $('resend').disabled = true;
   try {
+    const v = await post('/api/verify/start', { phone });
+    if (v.mode === 'whatsapp') {
+      waMode = true; waToken = v.token;
+      $('waLink').href = v.wa_link;
+      $('waBox').classList.remove('hidden');
+      $('sendOtp').classList.add('hidden');
+      $('phone').readOnly = true;
+      msg('Waiting for your WhatsApp message...', 'ok');
+      pollWa(phone);
+      return;
+    }
     otpToken = (await post('/api/otp/send', { phone })).token;
     $('otpBox').classList.remove('hidden');
     $('sendOtp').classList.add('hidden');
@@ -266,6 +307,16 @@ async function sendOtp() {
   setTimeout(() => { $('resend').disabled = false; }, 30000);
 }
 $('sendOtp').onclick = sendOtp;
+$('waRestart').onclick = async () => {
+  $('waRestart').disabled = true;
+  try {
+    const v = await post('/api/verify/start', { phone: $('phone').value.trim() });
+    waToken = v.token; $('waLink').href = v.wa_link;
+    msg('New link ready. Waiting for your WhatsApp message...', 'ok');
+    pollWa($('phone').value.trim());
+  } catch (e) { msg(e.message, 'err'); }
+  setTimeout(() => { $('waRestart').disabled = false; }, 10000);
+};
 $('resend').onclick = async () => {
   $('resend').disabled = true;
   try { otpToken = (await post('/api/otp/send', { phone: $('phone').value.trim() })).token; msg('A new code has been sent.', 'ok'); }
@@ -279,7 +330,8 @@ $('form').addEventListener('submit', async (ev) => {
   const body = Object.fromEntries(f.entries());
   body.source = source;
   body.otp_token = otpToken;
-  if (!/^\d{6}$/.test(body.otp || '')) return msg('Enter the 6-digit code.', 'err');
+  body.wa_token = waToken;
+  if (!waMode && !/^\d{6}$/.test(body.otp || '')) return msg('Enter the 6-digit code.', 'err');
   $('submit').disabled = true;
   try {
     await post('/api/leads', body);

@@ -35,7 +35,19 @@ Why a template: WhatsApp only allows free-form messages within 24 hours of the r
 
 If an alert fails, the function log shows the WhatsApp error code, and the lead is still saved in the inbox.
 
-## Customer OTP by SMS
+## Free customer verification through WhatsApp (recommended)
+
+Instead of sending a code, the visitor taps a button that opens WhatsApp with a pre-filled message containing a one-time code, addressed to your business number, and presses send. Messages sent to a business are never charged, so this costs nothing. Meta tells our webhook who sent it, which proves they own that WhatsApp number. The page notices and unlocks the Submit button.
+
+Setup (uses the same Meta app as the lead alerts):
+
+1. In the Meta app, WhatsApp > Configuration > Webhook: Callback URL `https://YOUR-SITE.netlify.app/api/whatsapp/webhook`, Verify token = the value you choose for `WHATSAPP_VERIFY_TOKEN`. Subscribe to the `messages` field.
+2. In Netlify add: `WHATSAPP_VERIFY_TOKEN` (any long random text), `WHATSAPP_APP_SECRET` (Meta app > Settings > Basic > App secret; mark secret), `WHATSAPP_BUSINESS_NUMBER` (the WhatsApp Cloud API number customers message, digits with country code), and `OTP_MODE=whatsapp`. Redeploy.
+3. Test from your own phone on the live page. Use a different phone than the one that receives alerts if possible.
+
+Notes: the customer must have WhatsApp on the number they enter. The business number must be the Cloud API number, not a personal number already registered in the WhatsApp app. When verified, the site sends a free confirmation reply (it is inside the 24 hour window the customer just opened).
+
+## Customer OTP by SMS (alternative)
 
 The site can send the code by SMS through MSG91 (`OTP_MODE=msg91`). Until you switch it on, `OTP_MODE=dev` writes the code to the Netlify function log, which is for testing only: real visitors never receive a code.
 

@@ -1,6 +1,6 @@
 import {
   json, clean, normalizePhone, PHONE_RE, CITIES, MACHINES,
-  store, hit, verifyOtp, notifyNewLead, newLeadKey,
+  store, hit, verifyOtp, consumeWaToken, notifyNewLead, newLeadKey,
 } from '../lib/common.mjs';
 
 export const config = { path: '/api/leads' };
@@ -37,7 +37,9 @@ export default async (req, context) => {
     return json({ error: 'Duration must be between 1 and 120 months.' }, 400);
   }
 
-  const otp = await verifyOtp(secret, clean(b.otp_token, 120), phone, clean(b.otp, 6));
+  const otp = process.env.OTP_MODE === 'whatsapp'
+    ? await consumeWaToken(secret, clean(b.wa_token, 120), phone)
+    : await verifyOtp(secret, clean(b.otp_token, 120), phone, clean(b.otp, 6));
   if (!otp.ok) return json({ error: otp.error }, 400);
 
   // one lead per phone per 24 hours: acknowledge repeats without creating or alerting again
