@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coffee &amp; Tea Vending Machine on Rent | VGS Enterprises</title>
+<meta name="description" content="Rent coffee and tea vending machines for your office, factory or shop in Chennai, Bangalore and Hyderabad. Get a quote today.">
+<style>
+  :root {
+    --bg: #faf6f1; --card: #ffffff; --ink: #2b211b; --muted: #6d5f55;
+    --brand: #7a4a2b; --brand-dark: #5c3820; --line: #e5dbd0; --err: #b3261e; --ok: #1e7a46;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1a1411; --card: #251d18; --ink: #f3ece4; --muted: #b5a698; --brand: #d49a6a; --brand-dark: #e5b183; --line: #3a2e26; --err: #ff8a80; --ok: #6fd69a; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--ink); line-height: 1.5; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.6rem; line-height: 1.25; margin: 8px 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .cities { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .chip { font-size: .85rem; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; background: var(--card); }
+  form, .done { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  label { display: block; font-weight: 600; font-size: .92rem; margin: 14px 0 6px; }
+  label:first-of-type { margin-top: 0; }
+  input, select, textarea { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; }
+  input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .phone { display: flex; gap: 8px; }
+  .phone span { display: flex; align-items: center; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--muted); }
+  button { font: inherit; font-weight: 600; cursor: pointer; border: 0; border-radius: 10px; padding: 12px 16px; background: var(--brand); color: #fff; }
+  @media (prefers-color-scheme: dark) { button { color: #1a1411; } }
+  button:hover { background: var(--brand-dark); }
+  button:disabled { opacity: .6; cursor: not-allowed; }
+  button.ghost { background: transparent; color: var(--brand); border: 1px solid var(--brand); }
+  .full { width: 100%; margin-top: 18px; }
+  .msg { min-height: 1.3em; margin-top: 10px; font-size: .9rem; }
+  .msg.err { color: var(--err); } .msg.ok { color: var(--ok); }
+  .hp { position: absolute; left: -9999px; height: 0; overflow: hidden; }
+  .hidden { display: none; }
+  .done h2 { margin-top: 0; }
+  .small { font-size: .8rem; color: var(--muted); margin-top: 14px; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="chip" style="display:inline-block">VGS Enterprises</div>
+  <h1>Coffee &amp; tea vending machines on rent</h1>
+  <p class="sub">For offices, factories, hospitals, showrooms and shops. Tell us what you need and we will call you with a quote.</p>
+  <div class="cities"><span class="chip">Chennai</span><span class="chip">Bangalore</span><span class="chip">Hyderabad</span></div>
+
+  <form id="form" novalidate>
+    <label for="name">Your name</label>
+    <input id="name" name="name" autocomplete="name" maxlength="80" required>
+
+    <label for="company">Company / place <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+    <input id="company" name="company" autocomplete="organization" maxlength="120">
+
+    <div class="row">
+      <div>
+        <label for="city">City</label>
+        <select id="city" name="city" required><option value="">Select</option></select>
+      </div>
+      <div>
+        <label for="machine">Machine type</label>
+        <select id="machine" name="machine" required><option value="">Select</option></select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="quantity">How many machines?</label>
+        <input id="quantity" name="quantity" type="number" min="1" max="500" value="1" inputmode="numeric" required>
+      </div>
+      <div>
+        <label for="duration">For how many months? <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+        <input id="duration" name="duration_months" type="number" min="1" max="120" inputmode="numeric">
+      </div>
+    </div>
+
+    <label for="notes">Anything else? <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+    <textarea id="notes" name="notes" rows="3" maxlength="500" placeholder="Number of staff, location, start date..."></textarea>
+
+    <label for="phone">Mobile number</label>
+    <div class="phone">
+      <span>+91</span>
+      <input id="phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" placeholder="10-digit number" required>
+    </div>
+
+    <div class="hp" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
+
+    <div id="otpBox" class="hidden">
+      <label for="otp">Enter the 6-digit code sent to your phone</label>
+      <input id="otp" name="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+      <button type="button" id="resend" class="ghost full" style="margin-top:10px">Resend code</button>
+    </div>
+
+    <button type="button" id="sendOtp" class="full">Verify my number</button>
+    <button type="submit" id="submit" class="full hidden">Request a quote</button>
+    <div id="msg" class="msg" role="status" aria-live="polite"></div>
+    <p class="small">We verify your number so only genuine requests reach us. We use it only to contact you about this enquiry.</p>
+  </form>
+
+  <div id="done" class="done hidden">
+    <h2>Thank you!</h2>
+    <p>We have your request and will call you shortly. If it is urgent, message us on WhatsApp.</p>
+  </div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const msg = (text, kind) => { $('msg').textContent = text || ''; $('msg').className = 'msg ' + (kind || ''); };
+const params = new URLSearchParams(location.search);
+const source = (params.get('utm_source') || params.get('src') || document.referrer || '').slice(0, 60);
+
+for (const c of ['Chennai', 'Bangalore', 'Hyderabad', 'Other']) $('city').add(new Option(c, c));
+for (const m of ['Coffee', 'Tea', 'Both coffee and tea', 'Not sure']) $('machine').add(new Option(m, m));
+let otpToken = '';
+
+async function post(url, body) {
+  const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || 'Something went wrong. Please try again.');
+  return data;
+}
+
+async function sendOtp() {
+  const phone = $('phone').value.trim();
+  if (!/^[6-9]\d{9}$/.test(phone)) return msg('Enter a valid 10-digit mobile number.', 'err');
+  for (const f of ['name', 'city', 'machine']) {
+    if (!$(f).value.trim()) { $(f).focus(); return msg('Please fill in your name, city and machine type first.', 'err'); }
+  }
+  $('sendOtp').disabled = true; $('resend').disabled = true;
+  try {
+    otpToken = (await post('/api/otp/send', { phone })).token;
+    $('otpBox').classList.remove('hidden');
+    $('sendOtp').classList.add('hidden');
+    $('submit').classList.remove('hidden');
+    $('phone').readOnly = true;
+    $('otp').focus();
+    msg('Code sent. It is valid for 10 minutes.', 'ok');
+  } catch (e) { msg(e.message, 'err'); $('sendOtp').disabled = false; }
+  setTimeout(() => { $('resend').disabled = false; }, 30000);
+}
+$('sendOtp').onclick = sendOtp;
+$('resend').onclick = async () => {
+  $('resend').disabled = true;
+  try { otpToken = (await post('/api/otp/send', { phone: $('phone').value.trim() })).token; msg('A new code has been sent.', 'ok'); }
+  catch (e) { msg(e.message, 'err'); }
+  setTimeout(() => { $('resend').disabled = false; }, 30000);
+};
+
+$('form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const f = new FormData($('form'));
+  const body = Object.fromEntries(f.entries());
+  body.source = source;
+  body.otp_token = otpToken;
+  if (!/^\d{6}$/.test(body.otp || '')) return msg('Enter the 6-digit code.', 'err');
+  $('submit').disabled = true;
+  try {
+    await post('/api/leads', body);
+    $('form').classList.add('hidden');
+    $('done').classList.remove('hidden');
+    window.scrollTo({ top: 0 });
+  } catch (e) { msg(e.message, 'err'); $('submit').disabled = false; }
+});
+</script>
+</body>
+</html>
